@@ -134,8 +134,12 @@ function buildLibrary(name, dir) {
     process.exit(1)
   }
   if (libraryPkgJson.scripts && libraryPkgJson.scripts.build) {
-    console.log(`[relative-deps] Building ${name} in ${dir}`)
-    spawn.sync(["run", "build"], { cwd: dir, stdio: [0, 1, 2] })
+    if (libraryPkgJson.scripts.prepack && libraryPkgJson.scripts.prepack.includes('build')) {
+      console.log(`[relative-deps] Skip building ${name} in ${dir} due to prepack script`)
+    } else {
+      console.log(`[relative-deps] Building ${name} in ${dir}`)
+      spawn.sync(["run", "build"], { cwd: dir, stdio: [0, 1, 2] })
+    }
   }
 }
 
@@ -161,14 +165,14 @@ function packAndInstallLibrary(name, dir, targetDir) {
 
     console.log(`[relative-deps] Extracting "${fullPackageName}" to ${libDestDir}`)
 
-    const [cwd, file] = [libDestDir, fullPackageName].map(absolutePath => 
+    const [cwd, file] = [libDestDir, fullPackageName].map(absolutePath =>
       path.relative(process.cwd(), absolutePath)
     )
 
     tar.extract({
       cwd,
       file,
-      gzip: true, 
+      gzip: true,
       stripComponents: 1,
       sync: true
     })
