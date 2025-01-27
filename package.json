@@ -1,5 +1,5 @@
 {
-  "name": "relative-deps",
+  "name": "@atomicbi/relative-deps",
   "version": "1.0.5",
   "description": "Installs local dependencies for optimal developer experience",
   "main": "index.js",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mweststrate/relative-deps.git"
+    "url": "git+ssh://git@github.com/atomicbi/relative-deps.git"
   },
   "keywords": [
     "yarn",
@@ -23,9 +23,9 @@
   "author": "Michel Weststrate",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mweststrate/relative-deps/issues"
+    "url": "https://github.com/atomicbi/relative-deps/issues"
   },
-  "homepage": "https://github.com/mweststrate/relative-deps#readme",
+  "homepage": "https://github.com/atomicbi/relative-deps#readme",
   "dependencies": {
     "checksum": "^0.1.1",
     "globby": "^9.2.0",
@@ -35,5 +35,6 @@
     "tar": "^6.0.5",
     "yargs": "^15.0.2",
     "yarn-or-npm": "^3.0.1"
-  }
+  },
+  "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
 }
