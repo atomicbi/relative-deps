@@ -1,5 +1,4 @@
 const path = require("path")
-const child_process = require("child_process")
 const fs = require("fs")
 const readPkgUp = require("read-pkg-up")
 const rimraf = require("rimraf")
