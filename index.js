@@ -23,7 +23,8 @@ async function installRelativeDeps() {
 
   const depNames = Object.keys(relativeDependencies)
   for (const name of depNames) {
-    const libDir = path.resolve(targetDir, relativeDependencies[name])
+    const config = resolveConfig(relativeDependencies[name])
+    const libDir = path.resolve(targetDir, config.path)
     console.log(`[relative-deps] Checking '${name}' in '${libDir}'`)
 
     const regularDep =
@@ -52,7 +53,7 @@ async function installRelativeDeps() {
       hash: "",
       file: ""
     }
-    const hasChanges = await libraryHasChanged(name, libDir, targetDir, hashStore)
+    const hasChanges = await libraryHasChanged(name, libDir, targetDir, hashStore, config.ignores)
     if (hasChanges) {
       buildLibrary(name, libDir)
       packAndInstallLibrary(name, libDir, targetDir)
@@ -77,11 +78,11 @@ async function watchRelativeDeps() {
   });
 }
 
-async function libraryHasChanged(name, libDir, targetDir, hashStore) {
+async function libraryHasChanged(name, libDir, targetDir, hashStore, ignores) {
   const hashFile = path.join(targetDir, "node_modules", name, ".relative-deps-hash")
   const referenceContents = fs.existsSync(hashFile) ? fs.readFileSync(hashFile, "utf8") : ""
   // compute the hahses
-  const libFiles = await findFiles(libDir, targetDir)
+  const libFiles = await findFiles(libDir, targetDir, ignores)
   const hashes = []
   for (file of libFiles) hashes.push(await getFileHash(path.join(libDir, file)))
   const contents = libFiles.map((file, index) => hashes[index] + " " + file).join("\n")
@@ -105,8 +106,8 @@ async function libraryHasChanged(name, libDir, targetDir, hashStore) {
   return true
 }
 
-async function findFiles(libDir, targetDir) {
-  const ignore = ["**/*", "!node_modules", "!.git"]
+async function findFiles(libDir, targetDir, ignores = []) {
+  const ignore = ["**/*", "!node_modules", "!.git", ...ignores]
   // TODO: use resolved paths here
   if (targetDir.indexOf(libDir) === 0) {
     // The target dir is in the lib directory, make sure that path is excluded
@@ -300,6 +301,10 @@ function setPackageData(pkgData) {
 
 function getPackageJson() {
   return JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), "utf-8"))
+}
+
+function resolveConfig(value) {
+  return (typeof value === 'string') ? { path: value, ignores: [] } : { ignores: [], ...value }
 }
 
 module.exports.watchRelativeDeps = watchRelativeDeps
