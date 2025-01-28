@@ -9,8 +9,20 @@ const debounce = require("lodash/debounce")
 const { spawn } = require("yarn-or-npm")
 const tar = require("tar")
 
+function loadStore() {
+  if (!fs.existsSync('node_modules/.relative-deps.json')) { return {} }
+  return JSON.parse(fs.readFileSync('node_modules/.relative-deps.json', 'utf-8'))
+}
+
+function saveStore(store) {
+  fs.writeFileSync('node_modules/.relative-deps.json', JSON.stringify(store, null, 2))
+}
+
 async function installRelativeDeps() {
   const projectPkgJson = readPkgUp.sync()
+
+  // Prepare Relative Deps Store
+  const store = loadStore()
 
   const relativeDependencies = projectPkgJson.package.relativeDependencies
 
@@ -49,15 +61,13 @@ async function installRelativeDeps() {
       }
     }
 
-    const hashStore = {
-      hash: "",
-      file: ""
-    }
-    const hasChanges = await libraryHasChanged(name, libDir, targetDir, hashStore, config.ignores)
+    const hash = await getLibraryHash(libDir, targetDir, config.ignores)
+    const hasChanges = store[name] !== hash
     if (hasChanges) {
       buildLibrary(name, libDir)
       packAndInstallLibrary(name, libDir, targetDir)
-      fs.writeFileSync(hashStore.file, hashStore.hash)
+      store[name] = hash
+      saveStore(store)
       console.log(`[relative-deps] Re-installing ${name}... DONE`)
     }
   }
@@ -78,32 +88,11 @@ async function watchRelativeDeps() {
   });
 }
 
-async function libraryHasChanged(name, libDir, targetDir, hashStore, ignores) {
-  const hashFile = path.join(targetDir, "node_modules", name, ".relative-deps-hash")
-  const referenceContents = fs.existsSync(hashFile) ? fs.readFileSync(hashFile, "utf8") : ""
-  // compute the hahses
-  const libFiles = await findFiles(libDir, targetDir, ignores)
-  const hashes = []
-  for (file of libFiles) hashes.push(await getFileHash(path.join(libDir, file)))
-  const contents = libFiles.map((file, index) => hashes[index] + " " + file).join("\n")
-  hashStore.file = hashFile
-  hashStore.hash = contents
-  if (contents === referenceContents) {
-    // computed hashes still the same?
-    console.log("[relative-deps] No changes")
-    return false
-  }
-  // Print which files did change
-  if (referenceContents) {
-    const contentsLines = contents.split("\n")
-    const refLines = referenceContents.split("\n")
-    for (let i = 0; i < contentsLines.length; i++)
-      if (contentsLines[i] !== refLines[i]) {
-        console.log("[relative-deps] Changed file: " + libFiles[i]) //, contentsLines[i], refLines[i])
-        break
-      }
-  }
-  return true
+async function getLibraryHash(libDir, targetDir, ignores) {
+  const files = await findFiles(libDir, targetDir, ignores)
+  const hashes = await Promise.all(files.map((file) => getFileHash(path.join(libDir, file))))
+  const contents = files.map((file, index) => `${hashes[index]}:${file}`).join(';')
+  return checksum(contents)
 }
 
 async function findFiles(libDir, targetDir, ignores = []) {
